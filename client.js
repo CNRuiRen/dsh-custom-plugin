@@ -46,8 +46,8 @@ window.__ModuleLoader__.load({
       fontWhite: 'White',
       fontBlack: 'Dark',
       fontCustom: 'Custom',
-      panelColor: 'Dialog / panel color',
-      panelColorDesc: 'Background color for dialogs, the composer, message bubbles, and cards.',
+      panelColor: 'Dialog / card color',
+      panelColorDesc: 'Background for dialogs, settings cards, inputs, message bubbles, and the sidebar top field.',
       panelOpacity: 'Panel opacity',
       highlightColor: 'Highlight color',
       highlightColorDesc: 'Background for inline code, code blocks, tags, and hover selections.',
@@ -58,6 +58,12 @@ window.__ModuleLoader__.load({
       fileHeaderColor: 'File header color',
       fileHeaderColorDesc: 'Title background of file previews and file/code cards.',
       fileHeaderOpacity: 'Header opacity',
+      selectionColor: 'Selection color',
+      selectionColorDesc: 'Background for selected navigation rows and selected text.',
+      selectionOpacity: 'Selection opacity',
+      selectionTextColor: 'Selected text color',
+      selectionTextColorDesc: 'Auto contrast follows the selection color; pick a custom color to override it.',
+      selectionTextAuto: 'Auto contrast',
       modalMask: 'Popup mask',
       modalMaskDesc: 'Darkness behind modal dialogs, independent of the wallpaper shade.',
       intensity: 'Background visibility',
@@ -110,8 +116,8 @@ window.__ModuleLoader__.load({
       fontWhite: '白色',
       fontBlack: '深色',
       fontCustom: '自定义',
-      panelColor: '对话框颜色',
-      panelColorDesc: '对话框、输入框、消息气泡和卡片的背景色。',
+      panelColor: '对话框 / 卡片颜色',
+      panelColorDesc: '对话框、设置卡片、输入框、消息气泡和侧栏顶部输入区的背景色。',
       panelOpacity: '面板不透明度',
       highlightColor: '高亮框颜色',
       highlightColorDesc: '行内代码、代码块、标签和悬停高亮的背景色。',
@@ -122,6 +128,12 @@ window.__ModuleLoader__.load({
       fileHeaderColor: '文件标题背景',
       fileHeaderColorDesc: '文件预览、文件卡片和代码块标题的背景色。',
       fileHeaderOpacity: '标题不透明度',
+      selectionColor: '选中颜色',
+      selectionColorDesc: '左侧导航选中项、选中的标签和文字光标的背景色。',
+      selectionOpacity: '选中不透明度',
+      selectionTextColor: '选中文字颜色',
+      selectionTextColorDesc: '自动对比会根据选中颜色选择黑/白文字，也可以自定义。',
+      selectionTextAuto: '自动对比',
       modalMask: '弹窗遮罩',
       modalMaskDesc: '独立调节弹出窗口背后的暗色遮罩。',
       intensity: '背景可见度',
@@ -155,6 +167,9 @@ window.__ModuleLoader__.load({
       buttonOpacity: 100,
       fileHeaderColor: 'auto',
       fileHeaderOpacity: 32,
+      selectionColor: 'auto',
+      selectionOpacity: 88,
+      selectionTextColor: 'auto',
       modalMask: 24,
       intensity: 45,
       blur: 0,
@@ -176,6 +191,8 @@ window.__ModuleLoader__.load({
       '--dsh-wallpaper-highlight',
       '--dsh-wallpaper-button',
       '--dsh-wallpaper-file-header',
+      '--dsh-wallpaper-selection',
+      '--dsh-wallpaper-selection-text',
       '--dsh-wallpaper-modal-mask',
     ]
 
@@ -232,10 +249,17 @@ window.__ModuleLoader__.load({
           if (saved.fileHeaderColor === 'auto' || (typeof saved.fileHeaderColor === 'string' && HEX_COLOR.test(saved.fileHeaderColor))) {
             state.fileHeaderColor = saved.fileHeaderColor
           }
+          if (saved.selectionColor === 'auto' || (typeof saved.selectionColor === 'string' && HEX_COLOR.test(saved.selectionColor))) {
+            state.selectionColor = saved.selectionColor
+          }
+          if (saved.selectionTextColor === 'auto' || (typeof saved.selectionTextColor === 'string' && HEX_COLOR.test(saved.selectionTextColor))) {
+            state.selectionTextColor = saved.selectionTextColor
+          }
           state.panelOpacity = clampOr(saved.panelOpacity, state.panelOpacity, 0, 100)
           state.highlightOpacity = clampOr(saved.highlightOpacity, state.highlightOpacity, 0, 100)
           state.buttonOpacity = clampOr(saved.buttonOpacity, state.buttonOpacity, 0, 100)
           state.fileHeaderOpacity = clampOr(saved.fileHeaderOpacity, state.fileHeaderOpacity, 0, 100)
+          state.selectionOpacity = clampOr(saved.selectionOpacity, state.selectionOpacity, 0, 100)
           state.modalMask = clampOr(saved.modalMask, state.modalMask, 0, 80)
           state.intensity = clampOr(saved.intensity, state.intensity, 0, 100)
           state.blur = clampOr(saved.blur, state.blur, 0, 30)
@@ -282,6 +306,9 @@ window.__ModuleLoader__.load({
           buttonOpacity: state.buttonOpacity,
           fileHeaderColor: state.fileHeaderColor,
           fileHeaderOpacity: state.fileHeaderOpacity,
+          selectionColor: state.selectionColor,
+          selectionOpacity: state.selectionOpacity,
+          selectionTextColor: state.selectionTextColor,
           modalMask: state.modalMask,
           intensity: state.intensity,
           blur: state.blur,
@@ -310,6 +337,7 @@ window.__ModuleLoader__.load({
       root.removeAttribute('data-dsh-wallpaper-highlight')
       root.removeAttribute('data-dsh-wallpaper-button')
       root.removeAttribute('data-dsh-wallpaper-file-header')
+      root.removeAttribute('data-dsh-wallpaper-selection')
       for (const name of OWNED_VARS) root.style.removeProperty(name)
     }
 
@@ -366,6 +394,21 @@ window.__ModuleLoader__.load({
       } else {
         root.removeAttribute('data-dsh-wallpaper-file-header')
         root.style.removeProperty('--dsh-wallpaper-file-header')
+      }
+
+      const selectionColor = state.selectionColor !== 'auto' && HEX_COLOR.test(state.selectionColor) ? state.selectionColor : ''
+      if (selectionColor) {
+        const autoText = isLightColor(selectionColor) ? '#0f1115' : '#ffffff'
+        const selectionText = state.selectionTextColor !== 'auto' && HEX_COLOR.test(state.selectionTextColor)
+          ? state.selectionTextColor
+          : autoText
+        root.setAttribute('data-dsh-wallpaper-selection', 'custom')
+        root.style.setProperty('--dsh-wallpaper-selection', hexToRgba(selectionColor, state.selectionOpacity))
+        root.style.setProperty('--dsh-wallpaper-selection-text', selectionText)
+      } else {
+        root.removeAttribute('data-dsh-wallpaper-selection')
+        root.style.removeProperty('--dsh-wallpaper-selection')
+        root.style.removeProperty('--dsh-wallpaper-selection-text')
       }
 
       root.style.setProperty('--dsh-wallpaper-image', 'url("' + state.image + '")')
@@ -478,6 +521,10 @@ window.__ModuleLoader__.load({
             commit({ buttonColor: value })
           } else if (key === 'fileHeaderColor' && (value === 'auto' || HEX_COLOR.test(value))) {
             commit({ fileHeaderColor: value })
+          } else if (key === 'selectionColor' && (value === 'auto' || HEX_COLOR.test(value))) {
+            commit({ selectionColor: value })
+          } else if (key === 'selectionTextColor' && (value === 'auto' || HEX_COLOR.test(value))) {
+            commit({ selectionTextColor: value })
           } else if (key === 'panelOpacity') {
             commit({ panelOpacity: clamp(value, 0, 100) })
           } else if (key === 'highlightOpacity') {
@@ -486,6 +533,8 @@ window.__ModuleLoader__.load({
             commit({ buttonOpacity: clamp(value, 0, 100) })
           } else if (key === 'fileHeaderOpacity') {
             commit({ fileHeaderOpacity: clamp(value, 0, 100) })
+          } else if (key === 'selectionOpacity') {
+            commit({ selectionOpacity: clamp(value, 0, 100) })
           } else if (key === 'modalMask') {
             commit({ modalMask: clamp(value, 0, 80) })
           }
@@ -520,6 +569,8 @@ window.__ModuleLoader__.load({
               highlightColor: 'auto',
               buttonColor: 'auto',
               fileHeaderColor: 'auto',
+              selectionColor: 'auto',
+              selectionTextColor: 'auto',
               panelOpacity: 68,
               highlightOpacity: 28,
               modalMask: 24,
@@ -683,6 +734,27 @@ window.__ModuleLoader__.load({
           disabled: props.disabled || auto,
           onChange: props.onOpacity,
         }),
+      )
+    }
+
+    function ColorOnly(props) {
+      const auto = props.color === 'auto'
+      return h('div', { className: 'dshw-color-control' },
+        h('label', { className: 'dshw-color-input', title: props.label },
+          h('input', {
+            type: 'color',
+            value: auto ? '#ffffff' : props.color,
+            'aria-label': props.label,
+            disabled: props.disabled,
+            onChange: (event) => props.onColor(event.target.value),
+          }),
+          h('span', null, auto ? props.autoLabel : props.customLabel),
+        ),
+        auto ? null : h('button', {
+          type: 'button',
+          className: 'dshw-mini-button',
+          onClick: props.onAuto,
+        }, props.autoLabel),
       )
     }
 
@@ -965,6 +1037,35 @@ window.__ModuleLoader__.load({
           })),
 
           h(Row, {
+            title: t('selectionColor'),
+            desc: t('selectionColorDesc'),
+          }, h(ColorOpacity, {
+            label: t('selectionColor'),
+            opacityLabel: t('selectionOpacity'),
+            autoLabel: t('fontAuto'),
+            customLabel: t('fontCustom'),
+            color: state.selectionColor,
+            opacity: state.selectionOpacity,
+            disabled: !state.image,
+            onColor: (value) => store.setField('selectionColor', value),
+            onAuto: () => store.setField('selectionColor', 'auto'),
+            onOpacity: (value) => store.setField('selectionOpacity', value),
+          })),
+
+          h(Row, {
+            title: t('selectionTextColor'),
+            desc: t('selectionTextColorDesc'),
+          }, h(ColorOnly, {
+            label: t('selectionTextColor'),
+            autoLabel: t('selectionTextAuto'),
+            customLabel: t('fontCustom'),
+            color: state.selectionTextColor,
+            disabled: !state.image || state.selectionColor === 'auto',
+            onColor: (value) => store.setField('selectionTextColor', value),
+            onAuto: () => store.setField('selectionTextColor', 'auto'),
+          })),
+
+          h(Row, {
             title: t('modalMask'),
             desc: t('modalMaskDesc'),
           }, h(Slider, {
@@ -1069,6 +1170,8 @@ window.__ModuleLoader__.load({
 :root[data-dsh-wallpaper-panel="custom"] body {
   --dsw-alias-bg-layer-1: var(--dsh-wallpaper-panel) !important;
   --dsw-alias-bg-layer-2: var(--dsh-wallpaper-panel) !important;
+  --dsw-alias-bg-layer-3: var(--dsh-wallpaper-panel) !important;
+  --dsw-alias-settings-card-fill: var(--dsh-wallpaper-panel) !important;
   --dsw-alias-bg-overlay: var(--dsh-wallpaper-panel) !important;
   --dsw-specific-bubble: var(--dsh-wallpaper-panel) !important;
   --dsw-specific-input-major: var(--dsh-wallpaper-panel) !important;
@@ -1119,6 +1222,26 @@ window.__ModuleLoader__.load({
 :root[data-dsh-wallpaper-file-header="custom"] [data-after-changes] {
   --deliverable-fill: var(--dsh-wallpaper-file-header) !important;
   --deliverable-hover: color-mix(in srgb, var(--dsh-wallpaper-file-header) 86%, #000) !important;
+}
+
+/* Selected navigation rows, tabs, and text selection share one palette. */
+:root[data-dsh-wallpaper-selection="custom"] body {
+  --dsw-specific-sidebar-nav-item-active: var(--dsh-wallpaper-selection) !important;
+  --dsw-specific-sidebar-nav-item-active-accent: var(--dsh-wallpaper-selection-text) !important;
+  --dsw-alias-interactive-bg-active: var(--dsh-wallpaper-selection) !important;
+  --dsw-alias-bg-multi-select: var(--dsh-wallpaper-selection) !important;
+}
+
+:root[data-dsh-wallpaper-selection="custom"] [aria-current="page"],
+:root[data-dsh-wallpaper-selection="custom"] [aria-selected="true"],
+:root[data-dsh-wallpaper-selection="custom"] [data-selected="true"] {
+  background-color: var(--dsh-wallpaper-selection) !important;
+  color: var(--dsh-wallpaper-selection-text) !important;
+}
+
+:root[data-dsh-wallpaper-selection="custom"] ::selection {
+  background: var(--dsh-wallpaper-selection) !important;
+  color: var(--dsh-wallpaper-selection-text) !important;
 }
 
 :root[data-dsh-wallpaper="on"] #root {
@@ -1722,7 +1845,7 @@ window.__ModuleLoader__.load({
         ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section',
           id: 'wallpaper',
-          order: 53,
+          order: 55,
           label: () => t('navLabel'),
           inject: () => ({ store, t, locale: ctx.locale }),
         }, SettingsPage))
