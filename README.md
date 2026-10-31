@@ -5,7 +5,7 @@
 > 非官方插件，与 DeepSeek / DeepSeek Harness 官方无隶属关系。  
 > 许可证：MIT。第三方内容与引用说明见 [提示.md](提示.md)。
 
-![示例壁纸（项目原创生成）](docs/wallpaper-preview.jpg)
+![示例壁纸（项目原创生成）](docs/show.PNG)
 
 ## 功能
 
