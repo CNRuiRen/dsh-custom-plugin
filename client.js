@@ -52,6 +52,12 @@ window.__ModuleLoader__.load({
       highlightColor: 'Highlight color',
       highlightColorDesc: 'Background for inline code, code blocks, tags, and hover selections.',
       highlightOpacity: 'Highlight opacity',
+      buttonColor: 'Button color',
+      buttonColorDesc: 'Fill for primary actions, send, and toolbar buttons.',
+      buttonOpacity: 'Button opacity',
+      fileHeaderColor: 'File header color',
+      fileHeaderColorDesc: 'Title background of file previews and file/code cards.',
+      fileHeaderOpacity: 'Header opacity',
       modalMask: 'Popup mask',
       modalMaskDesc: 'Darkness behind modal dialogs, independent of the wallpaper shade.',
       intensity: 'Background visibility',
@@ -110,6 +116,12 @@ window.__ModuleLoader__.load({
       highlightColor: '高亮框颜色',
       highlightColorDesc: '行内代码、代码块、标签和悬停高亮的背景色。',
       highlightOpacity: '高亮不透明度',
+      buttonColor: '按钮颜色',
+      buttonColorDesc: '主操作、发送和工具栏按钮的填充色。',
+      buttonOpacity: '按钮不透明度',
+      fileHeaderColor: '文件标题背景',
+      fileHeaderColorDesc: '文件预览、文件卡片和代码块标题的背景色。',
+      fileHeaderOpacity: '标题不透明度',
       modalMask: '弹窗遮罩',
       modalMaskDesc: '独立调节弹出窗口背后的暗色遮罩。',
       intensity: '背景可见度',
@@ -139,6 +151,10 @@ window.__ModuleLoader__.load({
       panelOpacity: 68,
       highlightColor: 'auto',
       highlightOpacity: 28,
+      buttonColor: 'auto',
+      buttonOpacity: 100,
+      fileHeaderColor: 'auto',
+      fileHeaderOpacity: 32,
       modalMask: 24,
       intensity: 45,
       blur: 0,
@@ -158,6 +174,8 @@ window.__ModuleLoader__.load({
       '--dsh-wallpaper-font-color',
       '--dsh-wallpaper-panel',
       '--dsh-wallpaper-highlight',
+      '--dsh-wallpaper-button',
+      '--dsh-wallpaper-file-header',
       '--dsh-wallpaper-modal-mask',
     ]
 
@@ -208,8 +226,16 @@ window.__ModuleLoader__.load({
           if (saved.highlightColor === 'auto' || (typeof saved.highlightColor === 'string' && HEX_COLOR.test(saved.highlightColor))) {
             state.highlightColor = saved.highlightColor
           }
+          if (saved.buttonColor === 'auto' || (typeof saved.buttonColor === 'string' && HEX_COLOR.test(saved.buttonColor))) {
+            state.buttonColor = saved.buttonColor
+          }
+          if (saved.fileHeaderColor === 'auto' || (typeof saved.fileHeaderColor === 'string' && HEX_COLOR.test(saved.fileHeaderColor))) {
+            state.fileHeaderColor = saved.fileHeaderColor
+          }
           state.panelOpacity = clampOr(saved.panelOpacity, state.panelOpacity, 0, 100)
           state.highlightOpacity = clampOr(saved.highlightOpacity, state.highlightOpacity, 0, 100)
+          state.buttonOpacity = clampOr(saved.buttonOpacity, state.buttonOpacity, 0, 100)
+          state.fileHeaderOpacity = clampOr(saved.fileHeaderOpacity, state.fileHeaderOpacity, 0, 100)
           state.modalMask = clampOr(saved.modalMask, state.modalMask, 0, 80)
           state.intensity = clampOr(saved.intensity, state.intensity, 0, 100)
           state.blur = clampOr(saved.blur, state.blur, 0, 30)
@@ -232,6 +258,10 @@ window.__ModuleLoader__.load({
           state.highlightColor = '#000000'
           state.highlightOpacity = 32
         }
+        if (state.fileHeaderColor === 'auto') {
+          state.fileHeaderColor = '#0f131b'
+          state.fileHeaderOpacity = 55
+        }
       }
       if (!state.image) state.imageName = ''
       return state
@@ -248,6 +278,10 @@ window.__ModuleLoader__.load({
           panelOpacity: state.panelOpacity,
           highlightColor: state.highlightColor,
           highlightOpacity: state.highlightOpacity,
+          buttonColor: state.buttonColor,
+          buttonOpacity: state.buttonOpacity,
+          fileHeaderColor: state.fileHeaderColor,
+          fileHeaderOpacity: state.fileHeaderOpacity,
           modalMask: state.modalMask,
           intensity: state.intensity,
           blur: state.blur,
@@ -274,6 +308,8 @@ window.__ModuleLoader__.load({
       root.removeAttribute('data-dsh-wallpaper-font')
       root.removeAttribute('data-dsh-wallpaper-panel')
       root.removeAttribute('data-dsh-wallpaper-highlight')
+      root.removeAttribute('data-dsh-wallpaper-button')
+      root.removeAttribute('data-dsh-wallpaper-file-header')
       for (const name of OWNED_VARS) root.style.removeProperty(name)
     }
 
@@ -312,6 +348,24 @@ window.__ModuleLoader__.load({
       } else {
         root.removeAttribute('data-dsh-wallpaper-highlight')
         root.style.removeProperty('--dsh-wallpaper-highlight')
+      }
+
+      const buttonColor = state.buttonColor !== 'auto' && HEX_COLOR.test(state.buttonColor) ? state.buttonColor : ''
+      if (buttonColor) {
+        root.setAttribute('data-dsh-wallpaper-button', 'custom')
+        root.style.setProperty('--dsh-wallpaper-button', hexToRgba(buttonColor, state.buttonOpacity))
+      } else {
+        root.removeAttribute('data-dsh-wallpaper-button')
+        root.style.removeProperty('--dsh-wallpaper-button')
+      }
+
+      const fileHeaderColor = state.fileHeaderColor !== 'auto' && HEX_COLOR.test(state.fileHeaderColor) ? state.fileHeaderColor : ''
+      if (fileHeaderColor) {
+        root.setAttribute('data-dsh-wallpaper-file-header', 'custom')
+        root.style.setProperty('--dsh-wallpaper-file-header', hexToRgba(fileHeaderColor, state.fileHeaderOpacity))
+      } else {
+        root.removeAttribute('data-dsh-wallpaper-file-header')
+        root.style.removeProperty('--dsh-wallpaper-file-header')
       }
 
       root.style.setProperty('--dsh-wallpaper-image', 'url("' + state.image + '")')
@@ -410,16 +464,28 @@ window.__ModuleLoader__.load({
                 patch.highlightColor = '#000000'
                 patch.highlightOpacity = 32
               }
+              if (state.fileHeaderColor === 'auto') {
+                patch.fileHeaderColor = '#0f131b'
+                patch.fileHeaderOpacity = 55
+              }
             }
             commit(patch)
           } else if (key === 'panelColor' && (value === 'auto' || HEX_COLOR.test(value))) {
             commit({ panelColor: value })
           } else if (key === 'highlightColor' && (value === 'auto' || HEX_COLOR.test(value))) {
             commit({ highlightColor: value })
+          } else if (key === 'buttonColor' && (value === 'auto' || HEX_COLOR.test(value))) {
+            commit({ buttonColor: value })
+          } else if (key === 'fileHeaderColor' && (value === 'auto' || HEX_COLOR.test(value))) {
+            commit({ fileHeaderColor: value })
           } else if (key === 'panelOpacity') {
             commit({ panelOpacity: clamp(value, 0, 100) })
           } else if (key === 'highlightOpacity') {
             commit({ highlightOpacity: clamp(value, 0, 100) })
+          } else if (key === 'buttonOpacity') {
+            commit({ buttonOpacity: clamp(value, 0, 100) })
+          } else if (key === 'fileHeaderOpacity') {
+            commit({ fileHeaderOpacity: clamp(value, 0, 100) })
           } else if (key === 'modalMask') {
             commit({ modalMask: clamp(value, 0, 80) })
           }
@@ -432,6 +498,8 @@ window.__ModuleLoader__.load({
               panelOpacity: 62,
               highlightColor: '#000000',
               highlightOpacity: 32,
+              fileHeaderColor: '#0f131b',
+              fileHeaderOpacity: 55,
               modalMask: 42,
             })
           } else if (name === 'light') {
@@ -441,6 +509,8 @@ window.__ModuleLoader__.load({
               panelOpacity: 80,
               highlightColor: '#000000',
               highlightOpacity: 8,
+              fileHeaderColor: '#ffffff',
+              fileHeaderOpacity: 70,
               modalMask: 20,
             })
           } else if (name === 'theme') {
@@ -448,6 +518,8 @@ window.__ModuleLoader__.load({
               fontColor: 'auto',
               panelColor: 'auto',
               highlightColor: 'auto',
+              buttonColor: 'auto',
+              fileHeaderColor: 'auto',
               panelOpacity: 68,
               highlightOpacity: 28,
               modalMask: 24,
@@ -861,6 +933,38 @@ window.__ModuleLoader__.load({
           })),
 
           h(Row, {
+            title: t('buttonColor'),
+            desc: t('buttonColorDesc'),
+          }, h(ColorOpacity, {
+            label: t('buttonColor'),
+            opacityLabel: t('buttonOpacity'),
+            autoLabel: t('fontAuto'),
+            customLabel: t('fontCustom'),
+            color: state.buttonColor,
+            opacity: state.buttonOpacity,
+            disabled: !state.image,
+            onColor: (value) => store.setField('buttonColor', value),
+            onAuto: () => store.setField('buttonColor', 'auto'),
+            onOpacity: (value) => store.setField('buttonOpacity', value),
+          })),
+
+          h(Row, {
+            title: t('fileHeaderColor'),
+            desc: t('fileHeaderColorDesc'),
+          }, h(ColorOpacity, {
+            label: t('fileHeaderColor'),
+            opacityLabel: t('fileHeaderOpacity'),
+            autoLabel: t('fontAuto'),
+            customLabel: t('fontCustom'),
+            color: state.fileHeaderColor,
+            opacity: state.fileHeaderOpacity,
+            disabled: !state.image,
+            onColor: (value) => store.setField('fileHeaderColor', value),
+            onAuto: () => store.setField('fileHeaderColor', 'auto'),
+            onOpacity: (value) => store.setField('fileHeaderOpacity', value),
+          })),
+
+          h(Row, {
             title: t('modalMask'),
             desc: t('modalMaskDesc'),
           }, h(Slider, {
@@ -982,6 +1086,39 @@ window.__ModuleLoader__.load({
   --dsw-alias-interactive-bg-hover-solid: var(--dsh-wallpaper-highlight) !important;
   --dsw-alias-state-business-tertiary: var(--dsh-wallpaper-highlight) !important;
   --dsw-specific-bubble-highlight: var(--dsh-wallpaper-highlight) !important;
+}
+
+/* Primary, info/send, and toolbar buttons share one user-chosen fill. */
+:root[data-dsh-wallpaper-button="custom"] body {
+  --dsw-alias-button-primary-fill: var(--dsh-wallpaper-button) !important;
+  --dsw-alias-button-primary-hover: color-mix(in srgb, var(--dsh-wallpaper-button) 86%, #000) !important;
+  --dsw-alias-button-info-fill: var(--dsh-wallpaper-button) !important;
+  --dsw-alias-button-info-hover: color-mix(in srgb, var(--dsh-wallpaper-button) 86%, #000) !important;
+  --dsw-alias-button-tool-bar-fill: var(--dsh-wallpaper-button) !important;
+  --dsw-alias-button-tool-bar-hover: color-mix(in srgb, var(--dsh-wallpaper-button) 86%, #000) !important;
+}
+
+/* File preview / file card / code block title bars. */
+:root[data-dsh-wallpaper-file-header="custom"] body {
+  --dsw-alias-markdown-code-block-banner: var(--dsh-wallpaper-file-header) !important;
+}
+
+:root[data-dsh-wallpaper-file-header="custom"] [data-code-block-banner],
+:root[data-dsh-wallpaper-file-header="custom"] [data-file-header],
+:root[data-dsh-wallpaper-file-header="custom"] [data-diff-header] {
+  background-color: var(--dsh-wallpaper-file-header) !important;
+}
+
+/* The changed-files summary and deliverable cards keep local fill variables
+   instead of theme aliases; target their stable data hooks. */
+:root[data-dsh-wallpaper-file-header="custom"] [data-changed-files] {
+  --changes-fill: var(--dsh-wallpaper-file-header) !important;
+  --changes-hover: color-mix(in srgb, var(--dsh-wallpaper-file-header) 86%, #000) !important;
+}
+
+:root[data-dsh-wallpaper-file-header="custom"] [data-after-changes] {
+  --deliverable-fill: var(--dsh-wallpaper-file-header) !important;
+  --deliverable-hover: color-mix(in srgb, var(--dsh-wallpaper-file-header) 86%, #000) !important;
 }
 
 :root[data-dsh-wallpaper="on"] #root {
@@ -1585,7 +1722,7 @@ window.__ModuleLoader__.load({
         ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section',
           id: 'wallpaper',
-          order: 51,
+          order: 53,
           label: () => t('navLabel'),
           inject: () => ({ store, t, locale: ctx.locale }),
         }, SettingsPage))
