@@ -73,9 +73,12 @@ window.__ModuleLoader__.load({
       highlightColor: 'Highlight color',
       highlightColorDesc: 'Background for inline code, code blocks, tags, and hover selections.',
       highlightOpacity: 'Highlight opacity',
-      buttonColor: 'Button color',
-      buttonColorDesc: 'Fill for primary actions, send, and toolbar buttons.',
-      buttonOpacity: 'Button opacity',
+      buttonColor: 'Button background',
+      buttonColorDesc: 'Fill for primary actions, send, toolbar, the new-session field, and the round add control.',
+      buttonOpacity: 'Button background opacity',
+      buttonTextColor: 'Button color',
+      buttonTextColorDesc: 'Text and icon color inside buttons; Auto contrast follows the button background.',
+      buttonTextAuto: 'Auto contrast',
       fileHeaderColor: 'File header color',
       fileHeaderColorDesc: 'Title background of file previews and file/code cards.',
       fileHeaderOpacity: 'Header opacity',
@@ -157,9 +160,12 @@ window.__ModuleLoader__.load({
       highlightColor: '高亮框颜色',
       highlightColorDesc: '行内代码、代码块、标签和悬停高亮的背景色。',
       highlightOpacity: '高亮不透明度',
-      buttonColor: '按钮颜色',
-      buttonColorDesc: '主操作、发送和工具栏按钮的填充色。',
-      buttonOpacity: '按钮不透明度',
+      buttonColor: '按钮背景颜色',
+      buttonColorDesc: '主操作、发送、工具栏、左侧新建会话区域和圆形添加按钮的填充色。',
+      buttonOpacity: '按钮背景不透明度',
+      buttonTextColor: '按钮颜色',
+      buttonTextColorDesc: '按钮内文字和图标的颜色；自动对比会根据按钮背景选择黑/白。',
+      buttonTextAuto: '自动对比',
       fileHeaderColor: '文件标题背景',
       fileHeaderColorDesc: '文件预览、文件卡片和代码块标题的背景色。',
       fileHeaderOpacity: '标题不透明度',
@@ -200,6 +206,7 @@ window.__ModuleLoader__.load({
       highlightOpacity: 28,
       buttonColor: 'auto',
       buttonOpacity: 100,
+      buttonTextColor: 'auto',
       fileHeaderColor: 'auto',
       fileHeaderOpacity: 32,
       selectionColor: 'auto',
@@ -229,6 +236,7 @@ window.__ModuleLoader__.load({
       '--dsh-wallpaper-panel',
       '--dsh-wallpaper-highlight',
       '--dsh-wallpaper-button',
+      '--dsh-wallpaper-button-text',
       '--dsh-wallpaper-file-header',
       '--dsh-wallpaper-selection',
       '--dsh-wallpaper-selection-text',
@@ -279,6 +287,9 @@ window.__ModuleLoader__.load({
       }
       if (saved.buttonColor === 'auto' || (typeof saved.buttonColor === 'string' && HEX_COLOR.test(saved.buttonColor))) {
         state.buttonColor = saved.buttonColor
+      }
+      if (saved.buttonTextColor === 'auto' || (typeof saved.buttonTextColor === 'string' && HEX_COLOR.test(saved.buttonTextColor))) {
+        state.buttonTextColor = saved.buttonTextColor
       }
       if (saved.fileHeaderColor === 'auto' || (typeof saved.fileHeaderColor === 'string' && HEX_COLOR.test(saved.fileHeaderColor))) {
         state.fileHeaderColor = saved.fileHeaderColor
@@ -406,6 +417,7 @@ window.__ModuleLoader__.load({
           highlightOpacity: state.highlightOpacity,
           buttonColor: state.buttonColor,
           buttonOpacity: state.buttonOpacity,
+          buttonTextColor: state.buttonTextColor,
           fileHeaderColor: state.fileHeaderColor,
           fileHeaderOpacity: state.fileHeaderOpacity,
           selectionColor: state.selectionColor,
@@ -448,6 +460,7 @@ window.__ModuleLoader__.load({
         highlightOpacity: state.highlightOpacity,
         buttonColor: state.buttonColor,
         buttonOpacity: state.buttonOpacity,
+        buttonTextColor: state.buttonTextColor,
         fileHeaderColor: state.fileHeaderColor,
         fileHeaderOpacity: state.fileHeaderOpacity,
         selectionColor: state.selectionColor,
@@ -523,6 +536,7 @@ window.__ModuleLoader__.load({
       root.removeAttribute('data-dsh-wallpaper-panel')
       root.removeAttribute('data-dsh-wallpaper-highlight')
       root.removeAttribute('data-dsh-wallpaper-button')
+      root.removeAttribute('data-dsh-wallpaper-button-text')
       root.removeAttribute('data-dsh-wallpaper-file-header')
       root.removeAttribute('data-dsh-wallpaper-selection')
       for (const name of OWNED_VARS) root.style.removeProperty(name)
@@ -572,6 +586,17 @@ window.__ModuleLoader__.load({
       } else {
         root.removeAttribute('data-dsh-wallpaper-button')
         root.style.removeProperty('--dsh-wallpaper-button')
+      }
+
+      const buttonText = state.buttonTextColor !== 'auto' && HEX_COLOR.test(state.buttonTextColor)
+        ? state.buttonTextColor
+        : (buttonColor ? (isLightColor(buttonColor) ? '#0f1115' : '#ffffff') : '')
+      if (buttonText) {
+        root.setAttribute('data-dsh-wallpaper-button-text', 'custom')
+        root.style.setProperty('--dsh-wallpaper-button-text', buttonText)
+      } else {
+        root.removeAttribute('data-dsh-wallpaper-button-text')
+        root.style.removeProperty('--dsh-wallpaper-button-text')
       }
 
       const fileHeaderColor = state.fileHeaderColor !== 'auto' && HEX_COLOR.test(state.fileHeaderColor) ? state.fileHeaderColor : ''
@@ -844,6 +869,8 @@ window.__ModuleLoader__.load({
             commit({ highlightColor: value })
           } else if (key === 'buttonColor' && (value === 'auto' || HEX_COLOR.test(value))) {
             commit({ buttonColor: value })
+          } else if (key === 'buttonTextColor' && (value === 'auto' || HEX_COLOR.test(value))) {
+            commit({ buttonTextColor: value })
           } else if (key === 'fileHeaderColor' && (value === 'auto' || HEX_COLOR.test(value))) {
             commit({ fileHeaderColor: value })
           } else if (key === 'selectionColor' && (value === 'auto' || HEX_COLOR.test(value))) {
@@ -899,6 +926,7 @@ window.__ModuleLoader__.load({
               panelColor: 'auto',
               highlightColor: 'auto',
               buttonColor: 'auto',
+              buttonTextColor: 'auto',
               fileHeaderColor: 'auto',
               selectionColor: 'auto',
               selectionTextColor: 'auto',
@@ -1421,6 +1449,19 @@ window.__ModuleLoader__.load({
           })),
 
           h(Row, {
+            title: t('buttonTextColor'),
+            desc: t('buttonTextColorDesc'),
+          }, h(ColorOnly, {
+            label: t('buttonTextColor'),
+            autoLabel: t('buttonTextAuto'),
+            customLabel: t('fontCustom'),
+            color: state.buttonTextColor,
+            disabled: !state.image,
+            onColor: (value) => store.setField('buttonTextColor', value),
+            onAuto: () => store.setField('buttonTextColor', 'auto'),
+          })),
+
+          h(Row, {
             title: t('buttonColor'),
             desc: t('buttonColorDesc'),
           }, h(ColorOpacity, {
@@ -1618,6 +1659,13 @@ window.__ModuleLoader__.load({
   --dsw-alias-button-elevated-fill: var(--dsh-wallpaper-button) !important;
   --dsw-alias-button-floating-hover: color-mix(in srgb, var(--dsh-wallpaper-button) 86%, #000) !important;
   --dsw-specific-selector: var(--dsh-wallpaper-button) !important;
+}
+
+:root[data-dsh-wallpaper-button-text="custom"] button,
+:root[data-dsh-wallpaper-button-text="custom"] [role="button"],
+:root[data-dsh-wallpaper-button-text="custom"] input[type="button"],
+:root[data-dsh-wallpaper-button-text="custom"] input[type="submit"] {
+  color: var(--dsh-wallpaper-button-text) !important;
 }
 
 /* File preview / file card / code block title bars. */
@@ -2378,7 +2426,7 @@ window.__ModuleLoader__.load({
         ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section',
           id: 'wallpaper',
-          order: 58,
+          order: 60,
           label: () => t('navLabel'),
           inject: () => ({ store, t, locale: ctx.locale }),
         }, SettingsPage))
