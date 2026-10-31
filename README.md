@@ -1,60 +1,92 @@
-# DSH Wallpaper
+# dsh-wallpaper-cnr
 
-A local DeepSeek Harness Web UI plugin that adds a **Wallpaper** settings page.
+给 DeepSeek Harness Web UI 使用的开源壁纸插件。上传自己的图片，设为启动后的工作区、空白会话 Hero、对话页和侧栏背景。
 
-Upload your own image and use it behind the startup workspace, the blank-session Hero, conversations, and the sidebars.
+> 非官方插件，与 DeepSeek / DeepSeek Harness 官方无隶属关系。  
+> 许可证：MIT。第三方内容与引用说明见 [提示.md](提示.md)。
 
-## Features
+![示例壁纸（项目原创生成）](docs/wallpaper-preview.jpg)
 
-- Upload JPG, PNG, WebP, or any image the browser can decode.
-- Images are resized and compressed in the browser before storage.
-- Fill, fit, or tile the image.
-- Tune background visibility, blur, and shade.
-- **No mask** mode keeps the artwork clear and overlays a nearly transparent shell.
-- Text color presets (theme, white, dark) plus a custom color picker.
-- Turn the wallpaper off without deleting the image.
-- The image and preferences stay in this browser's local storage. Nothing is uploaded to a server.
+## 功能
 
-The plugin is client-only: the Host half is an empty bundle entry and the browser module owns rendering and storage.
+- 上传 JPG、PNG、WebP 等浏览器可解码的图片。
+- 在浏览器内自动缩放、压缩，再保存到本地。
+- 支持填满、适应、平铺三种显示方式。
+- 可调节背景可见度、模糊、遮罩强度。
+- **无遮罩**模式：去掉图片上的色罩，让界面以近乎透明的方式叠在图片上。
+- 可调字体颜色：跟随主题、白色、深色，或任选自定义颜色。
+- 可随时关闭背景；图片不会被删除。
+- 背景图与偏好只保存在当前浏览器，不会上传到服务器。
 
-## Install
+插件是纯 Client 实现：Host 入口为空，背景渲染、图片处理和存储都在浏览器端完成。
 
-The repository must be public. In the DeepSeek Harness Web UI:
+## 安装
 
-1. Open **Plugins**.
-2. Choose **Add plugin → Install a third-party plugin**.
-3. Paste the Git address:
+仓库必须为公开仓库。推荐在 DeepSeek Harness Web UI 中安装：
+
+1. 打开 **Plugins**。
+2. 点击 **Add plugin → Install a third-party plugin**。
+3. 粘贴 Git 地址：
 
    ```text
-   github:OWNER/dsh-wallpaper
+   github:CNRuiRen/dsh-custom-plugin
    ```
 
-4. Install and enable the bundle.
+4. 安装并启用 bundle。
 
-Or from a terminal:
+也可以在终端执行：
 
 ```sh
-dsh plugin --profile <profile> add github:OWNER/dsh-wallpaper
+dsh plugin --profile <profile> add github:CNRuiRen/dsh-custom-plugin
 ```
 
-Replace `OWNER` with the GitHub account that owns this repository, and `<profile>` with the DSH profile to modify (for example `desktop`).
+把 `<profile>` 换成要修改的 DSH profile，例如 `desktop`。
 
-## Use
+包名：`dsh-wallpaper-cnr`。
 
-Open **Settings → Wallpaper** (背景图片):
+## 使用
 
-1. Upload an image.
-2. Pick a fill mode.
-3. Choose the **Shade effect**: **Soft** for a wash, or **No mask** for clear artwork.
-4. Adjust text color if needed.
-5. Close Settings; the wallpaper applies to the workspace and startup screen.
+打开 **设置 → 背景图片**：
 
-## Notes
+1. 上传图片。
+2. 选择填充方式。
+3. 选择 **遮罩效果**：
+   - **柔和**：保留一层底色，文字更稳。
+   - **无遮罩**：图片保持清晰，界面近乎透明。
+4. 按需调整 **字体颜色**、背景可见度、模糊和遮罩强度。
+5. 关闭设置，背景会应用到工作区和启动界面。
 
-- The image is stored in `localStorage` for the current browser origin. If DSH starts on a different port, the browser treats it as a different origin and the image needs to be uploaded again.
-- Text color is applied through the theme's label tokens, so it follows the whole interface. White text is usually best with **No mask** over a dark image.
-- Tested with DeepSeek Harness `0.2.1-rc.5` Web UI.
+### 字体颜色
 
-## License
+字体颜色通过 DSH 的主题文字 Token 生效，会影响主标题、正文、侧栏文字、辅助说明和图标颜色。搭配「无遮罩」和深色图片时，建议使用白色或浅色字体。
 
-MIT
+### 图片保存位置
+
+图片保存在浏览器的 `localStorage` 中，并按浏览器来源（协议 + 主机 + 端口）隔离。如果 DSH 重启后端口变化，浏览器会把它当成新的来源，需要重新上传一次。
+
+## 兼容性
+
+- 在 DeepSeek Harness `0.2.1-rc.5` Web UI 上测试。
+- 仅支持 Web UI；不适用于没有 Web 前端的 profile。
+- 需要目标版本提供 `settings.section` 插槽与 Client 插件加载能力。
+
+## 开发
+
+```sh
+git clone git@github.com:CNRuiRen/dsh-custom-plugin.git
+cd dsh-custom-plugin
+```
+
+把本地目录安装到 DSH profile 后即可调试：
+
+```sh
+dsh plugin --profile <profile> add /absolute/path/to/dsh-custom-plugin
+```
+
+开发分支：`dev`。
+
+示例背景图由仓库内的 [docs/generate-preview.py](docs/generate-preview.py) 程序化生成，不包含第三方图片素材。
+
+## 许可证
+
+代码、图标、示例背景图与文档均按 [MIT License](LICENSE) 发布。

@@ -1,10 +1,25 @@
 {
-  "name": "@local/dsh-wallpaper",
-  "version": "1.0.0",
+  "name": "dsh-wallpaper-cnr",
+  "version": "0.0.1",
   "type": "module",
   "description": "Personal wallpaper for the DeepSeek Harness workspace and startup screen, with a settings page for uploading your own image.",
   "license": "MIT",
-  "author": "luyu",
+  "author": "CNRuiRen",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CNRuiRen/dsh-custom-plugin.git"
+  },
+  "homepage": "https://github.com/CNRuiRen/dsh-custom-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/CNRuiRen/dsh-custom-plugin/issues"
+  },
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "plugin",
+    "wallpaper"
+  ],
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -18,7 +33,10 @@
     "locale/*.json",
     "icon.svg",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "提示.md",
+    "docs/wallpaper-preview.jpg",
+    "docs/generate-preview.py"
   ],
   "dsh": {
     "bundle": {
