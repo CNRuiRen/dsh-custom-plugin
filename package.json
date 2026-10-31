@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Personal wallpaper for the DeepSeek Harness workspace and startup screen, with a settings page for uploading your own image.",
+  "license": "MIT",
+  "author": "luyu",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -15,7 +17,8 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "dsh": {
     "bundle": {
