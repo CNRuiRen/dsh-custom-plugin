@@ -35,12 +35,25 @@ window.__ModuleLoader__.load({
       maskDesc: '“No mask” keeps the artwork clear and puts the interface directly over it.',
       maskSoft: 'Soft',
       maskNone: 'No mask',
+      scheme: 'Quick palette',
+      schemeDesc: 'Apply a matched text, panel, and highlight palette. Best paired with No mask.',
+      schemeTheme: 'Theme',
+      schemeDark: 'Dark glass',
+      schemeLight: 'Light glass',
       fontColor: 'Text color',
       fontColorDesc: 'Pick a color with enough contrast for your image. Best paired with No mask.',
       fontAuto: 'Theme',
       fontWhite: 'White',
       fontBlack: 'Dark',
       fontCustom: 'Custom',
+      panelColor: 'Dialog / panel color',
+      panelColorDesc: 'Background color for dialogs, the composer, message bubbles, and cards.',
+      panelOpacity: 'Panel opacity',
+      highlightColor: 'Highlight color',
+      highlightColorDesc: 'Background for inline code, code blocks, tags, and hover selections.',
+      highlightOpacity: 'Highlight opacity',
+      modalMask: 'Popup mask',
+      modalMaskDesc: 'Darkness behind modal dialogs, independent of the wallpaper shade.',
       intensity: 'Background visibility',
       intensityDesc: 'Higher values let more of the image show through the interface.',
       blur: 'Blur',
@@ -80,12 +93,25 @@ window.__ModuleLoader__.load({
       maskDesc: '“无遮罩”会保持图片清晰，让界面以透明效果直接叠在图片上。',
       maskSoft: '柔和',
       maskNone: '无遮罩',
+      scheme: '快捷配色',
+      schemeDesc: '一键匹配文字、对话框和高亮框；建议搭配“无遮罩”使用。',
+      schemeTheme: '跟随主题',
+      schemeDark: '深色玻璃',
+      schemeLight: '浅色玻璃',
       fontColor: '字体颜色',
       fontColorDesc: '选择与背景图片对比清晰的颜色，建议搭配“无遮罩”使用。',
       fontAuto: '跟随主题',
       fontWhite: '白色',
       fontBlack: '深色',
       fontCustom: '自定义',
+      panelColor: '对话框颜色',
+      panelColorDesc: '对话框、输入框、消息气泡和卡片的背景色。',
+      panelOpacity: '面板不透明度',
+      highlightColor: '高亮框颜色',
+      highlightColorDesc: '行内代码、代码块、标签和悬停高亮的背景色。',
+      highlightOpacity: '高亮不透明度',
+      modalMask: '弹窗遮罩',
+      modalMaskDesc: '独立调节弹出窗口背后的暗色遮罩。',
       intensity: '背景可见度',
       intensityDesc: '数值越高，界面越通透，图片越明显。',
       blur: '模糊',
@@ -109,6 +135,11 @@ window.__ModuleLoader__.load({
       fit: 'cover',
       mask: 'soft',
       fontColor: 'auto',
+      panelColor: 'auto',
+      panelOpacity: 68,
+      highlightColor: 'auto',
+      highlightOpacity: 28,
+      modalMask: 24,
       intensity: 45,
       blur: 0,
       dim: 18,
@@ -125,12 +156,38 @@ window.__ModuleLoader__.load({
       '--dsh-wallpaper-dim',
       '--dsh-wallpaper-blur',
       '--dsh-wallpaper-font-color',
+      '--dsh-wallpaper-panel',
+      '--dsh-wallpaper-highlight',
+      '--dsh-wallpaper-modal-mask',
     ]
 
     function clamp(value, min, max) {
       const number = Number(value)
       if (!Number.isFinite(number)) return min
       return Math.min(max, Math.max(min, number))
+    }
+
+    function clampOr(value, fallback, min, max) {
+      const number = Number(value)
+      if (!Number.isFinite(number)) return fallback
+      return Math.min(max, Math.max(min, number))
+    }
+
+    function hexToRgba(hex, opacity) {
+      const value = hex.slice(1)
+      const red = Number.parseInt(value.slice(0, 2), 16)
+      const green = Number.parseInt(value.slice(2, 4), 16)
+      const blue = Number.parseInt(value.slice(4, 6), 16)
+      return `rgba(${red}, ${green}, ${blue}, ${clamp(opacity, 0, 100) / 100})`
+    }
+
+    function isLightColor(hex) {
+      const value = hex.slice(1)
+      const channels = [0, 2, 4].map((offset) => {
+        const channel = Number.parseInt(value.slice(offset, offset + 2), 16) / 255
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+      })
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722 > 0.55
     }
 
     function readState() {
@@ -145,9 +202,18 @@ window.__ModuleLoader__.load({
           if (saved.fontColor === 'auto' || (typeof saved.fontColor === 'string' && HEX_COLOR.test(saved.fontColor))) {
             state.fontColor = saved.fontColor
           }
-          state.intensity = clamp(saved.intensity, 0, 100)
-          state.blur = clamp(saved.blur, 0, 30)
-          state.dim = clamp(saved.dim, 0, 60)
+          if (saved.panelColor === 'auto' || (typeof saved.panelColor === 'string' && HEX_COLOR.test(saved.panelColor))) {
+            state.panelColor = saved.panelColor
+          }
+          if (saved.highlightColor === 'auto' || (typeof saved.highlightColor === 'string' && HEX_COLOR.test(saved.highlightColor))) {
+            state.highlightColor = saved.highlightColor
+          }
+          state.panelOpacity = clampOr(saved.panelOpacity, state.panelOpacity, 0, 100)
+          state.highlightOpacity = clampOr(saved.highlightOpacity, state.highlightOpacity, 0, 100)
+          state.modalMask = clampOr(saved.modalMask, state.modalMask, 0, 80)
+          state.intensity = clampOr(saved.intensity, state.intensity, 0, 100)
+          state.blur = clampOr(saved.blur, state.blur, 0, 30)
+          state.dim = clampOr(saved.dim, state.dim, 0, 60)
           if (typeof saved.imageName === 'string') state.imageName = saved.imageName
         }
         const image = localStorage.getItem(IMAGE_KEY)
@@ -166,6 +232,11 @@ window.__ModuleLoader__.load({
           fit: state.fit,
           mask: state.mask,
           fontColor: state.fontColor,
+          panelColor: state.panelColor,
+          panelOpacity: state.panelOpacity,
+          highlightColor: state.highlightColor,
+          highlightOpacity: state.highlightOpacity,
+          modalMask: state.modalMask,
           intensity: state.intensity,
           blur: state.blur,
           dim: state.dim,
@@ -189,6 +260,8 @@ window.__ModuleLoader__.load({
       root.removeAttribute('data-dsh-wallpaper-fit')
       root.removeAttribute('data-dsh-wallpaper-mask')
       root.removeAttribute('data-dsh-wallpaper-font')
+      root.removeAttribute('data-dsh-wallpaper-panel')
+      root.removeAttribute('data-dsh-wallpaper-highlight')
       for (const name of OWNED_VARS) root.style.removeProperty(name)
     }
 
@@ -210,10 +283,30 @@ window.__ModuleLoader__.load({
         root.removeAttribute('data-dsh-wallpaper-font')
         root.style.removeProperty('--dsh-wallpaper-font-color')
       }
+
+      const panelColor = state.panelColor !== 'auto' && HEX_COLOR.test(state.panelColor) ? state.panelColor : ''
+      if (panelColor) {
+        root.setAttribute('data-dsh-wallpaper-panel', 'custom')
+        root.style.setProperty('--dsh-wallpaper-panel', hexToRgba(panelColor, state.panelOpacity))
+      } else {
+        root.removeAttribute('data-dsh-wallpaper-panel')
+        root.style.removeProperty('--dsh-wallpaper-panel')
+      }
+
+      const highlightColor = state.highlightColor !== 'auto' && HEX_COLOR.test(state.highlightColor) ? state.highlightColor : ''
+      if (highlightColor) {
+        root.setAttribute('data-dsh-wallpaper-highlight', 'custom')
+        root.style.setProperty('--dsh-wallpaper-highlight', hexToRgba(highlightColor, state.highlightOpacity))
+      } else {
+        root.removeAttribute('data-dsh-wallpaper-highlight')
+        root.style.removeProperty('--dsh-wallpaper-highlight')
+      }
+
       root.style.setProperty('--dsh-wallpaper-image', 'url("' + state.image + '")')
       root.style.setProperty('--dsh-wallpaper-surface', String(surfaceAlpha(state.intensity).toFixed(3)))
       root.style.setProperty('--dsh-wallpaper-dim', String(clamp(state.dim, 0, 60) / 100))
       root.style.setProperty('--dsh-wallpaper-blur', clamp(state.blur, 0, 30) + 'px')
+      root.style.setProperty('--dsh-wallpaper-modal-mask', String(clamp(state.modalMask, 0, 80) / 100))
     }
 
     function createStore() {
@@ -293,7 +386,60 @@ window.__ModuleLoader__.load({
           else if (key === 'fit' && FITS.includes(value)) commit({ fit: value })
           else if (key === 'mask' && MASKS.includes(value)) commit({ mask: value })
           else if (key === 'fontColor' && (value === 'auto' || HEX_COLOR.test(value))) {
-            commit({ fontColor: value })
+            const patch = { fontColor: value }
+            // White/light text on the default light highlight is the exact
+            // white-on-white failure seen after changing a wallpaper.
+            if (value !== 'auto' && isLightColor(value)) {
+              if (state.panelColor === 'auto') {
+                patch.panelColor = '#0f131b'
+                patch.panelOpacity = 62
+              }
+              if (state.highlightColor === 'auto') {
+                patch.highlightColor = '#000000'
+                patch.highlightOpacity = 32
+              }
+            }
+            commit(patch)
+          } else if (key === 'panelColor' && (value === 'auto' || HEX_COLOR.test(value))) {
+            commit({ panelColor: value })
+          } else if (key === 'highlightColor' && (value === 'auto' || HEX_COLOR.test(value))) {
+            commit({ highlightColor: value })
+          } else if (key === 'panelOpacity') {
+            commit({ panelOpacity: clamp(value, 0, 100) })
+          } else if (key === 'highlightOpacity') {
+            commit({ highlightOpacity: clamp(value, 0, 100) })
+          } else if (key === 'modalMask') {
+            commit({ modalMask: clamp(value, 0, 80) })
+          }
+        },
+        applyPreset: (name) => {
+          if (name === 'dark') {
+            commit({
+              fontColor: '#ffffff',
+              panelColor: '#0f131b',
+              panelOpacity: 62,
+              highlightColor: '#000000',
+              highlightOpacity: 32,
+              modalMask: 42,
+            })
+          } else if (name === 'light') {
+            commit({
+              fontColor: '#0f1115',
+              panelColor: '#ffffff',
+              panelOpacity: 80,
+              highlightColor: '#000000',
+              highlightOpacity: 8,
+              modalMask: 20,
+            })
+          } else if (name === 'theme') {
+            commit({
+              fontColor: 'auto',
+              panelColor: 'auto',
+              highlightColor: 'auto',
+              panelOpacity: 68,
+              highlightOpacity: 28,
+              modalMask: 24,
+            })
           }
         },
         setFile,
@@ -421,6 +567,38 @@ window.__ModuleLoader__.load({
           onChange: (event) => props.onChange(Number(event.target.value)),
         }),
         h('span', { className: 'dshw-value' }, props.value + props.suffix),
+      )
+    }
+
+    function ColorOpacity(props) {
+      const auto = props.color === 'auto'
+      return h('div', { className: 'dshw-color-stack' },
+        h('div', { className: 'dshw-color-control' },
+          h('label', { className: 'dshw-color-input', title: props.label },
+            h('input', {
+              type: 'color',
+              value: auto ? '#808080' : props.color,
+              'aria-label': props.label,
+              disabled: props.disabled,
+              onChange: (event) => props.onColor(event.target.value),
+            }),
+            h('span', null, auto ? props.autoLabel : props.customLabel),
+          ),
+          auto ? null : h('button', {
+            type: 'button',
+            className: 'dshw-mini-button',
+            onClick: props.onAuto,
+          }, props.autoLabel),
+        ),
+        h(Slider, {
+          label: props.opacityLabel,
+          min: 0,
+          max: 100,
+          value: auto ? 0 : props.opacity,
+          suffix: '%',
+          disabled: props.disabled || auto,
+          onChange: props.onOpacity,
+        }),
       )
     }
 
@@ -588,6 +766,30 @@ window.__ModuleLoader__.load({
           })),
 
           h(Row, {
+            title: t('scheme'),
+            desc: t('schemeDesc'),
+          }, h('div', { className: 'dshw-presets' },
+            h('button', {
+              type: 'button',
+              className: 'dshw-button dshw-button--small',
+              disabled: !state.image,
+              onClick: () => store.applyPreset('theme'),
+            }, t('schemeTheme')),
+            h('button', {
+              type: 'button',
+              className: 'dshw-button dshw-button--small',
+              disabled: !state.image,
+              onClick: () => store.applyPreset('dark'),
+            }, t('schemeDark')),
+            h('button', {
+              type: 'button',
+              className: 'dshw-button dshw-button--small',
+              disabled: !state.image,
+              onClick: () => store.applyPreset('light'),
+            }, t('schemeLight')),
+          )),
+
+          h(Row, {
             title: t('fontColor'),
             desc: t('fontColorDesc'),
           }, h('div', { className: 'dshw-color-control' },
@@ -613,6 +815,51 @@ window.__ModuleLoader__.load({
               h('span', null, t('fontCustom')),
             ),
           )),
+
+          h(Row, {
+            title: t('panelColor'),
+            desc: t('panelColorDesc'),
+          }, h(ColorOpacity, {
+            label: t('panelColor'),
+            opacityLabel: t('panelOpacity'),
+            autoLabel: t('fontAuto'),
+            customLabel: t('fontCustom'),
+            color: state.panelColor,
+            opacity: state.panelOpacity,
+            disabled: !state.image,
+            onColor: (value) => store.setField('panelColor', value),
+            onAuto: () => store.setField('panelColor', 'auto'),
+            onOpacity: (value) => store.setField('panelOpacity', value),
+          })),
+
+          h(Row, {
+            title: t('highlightColor'),
+            desc: t('highlightColorDesc'),
+          }, h(ColorOpacity, {
+            label: t('highlightColor'),
+            opacityLabel: t('highlightOpacity'),
+            autoLabel: t('fontAuto'),
+            customLabel: t('fontCustom'),
+            color: state.highlightColor,
+            opacity: state.highlightOpacity,
+            disabled: !state.image,
+            onColor: (value) => store.setField('highlightColor', value),
+            onAuto: () => store.setField('highlightColor', 'auto'),
+            onOpacity: (value) => store.setField('highlightOpacity', value),
+          })),
+
+          h(Row, {
+            title: t('modalMask'),
+            desc: t('modalMaskDesc'),
+          }, h(Slider, {
+            label: t('modalMask'),
+            min: 0,
+            max: 80,
+            value: state.modalMask,
+            suffix: '%',
+            disabled: !state.image,
+            onChange: (value) => store.setField('modalMask', value),
+          })),
 
           h(Row, {
             title: t('intensity'),
@@ -668,6 +915,7 @@ window.__ModuleLoader__.load({
   --dsw-alias-bg-layer-2: rgba(255, 255, 255, calc(var(--dsh-wallpaper-surface, 0.6) + 0.20)) !important;
   --dsw-alias-bg-overlay: rgba(250, 250, 252, 0.97) !important;
   --dsw-specific-sidebar-fill: rgba(249, 250, 251, calc(var(--dsh-wallpaper-surface, 0.6) + 0.08)) !important;
+  --dsw-alias-bg-mask-1: rgba(0, 0, 0, var(--dsh-wallpaper-modal-mask, 0.24)) !important;
 }
 
 :root[data-dsh-wallpaper="on"] body[data-ds-dark-theme] {
@@ -698,6 +946,30 @@ window.__ModuleLoader__.load({
   --dsw-alias-label-secondary: color-mix(in srgb, var(--dsh-wallpaper-font-color) 80%, transparent) !important;
   --dsw-alias-label-tertiary: color-mix(in srgb, var(--dsh-wallpaper-font-color) 68%, transparent) !important;
   --dsw-alias-label-caption: color-mix(in srgb, var(--dsh-wallpaper-font-color) 56%, transparent) !important;
+}
+
+/* User-tunable dialog / bubble / card surfaces. The panel color is an RGBA
+   value computed from the chosen color and its opacity. */
+:root[data-dsh-wallpaper-panel="custom"] body {
+  --dsw-alias-bg-layer-1: var(--dsh-wallpaper-panel) !important;
+  --dsw-alias-bg-layer-2: var(--dsh-wallpaper-panel) !important;
+  --dsw-alias-bg-overlay: var(--dsh-wallpaper-panel) !important;
+  --dsw-specific-bubble: var(--dsh-wallpaper-panel) !important;
+  --dsw-specific-input-major: var(--dsh-wallpaper-panel) !important;
+}
+
+/* Inline code, code blocks, tags, and hover/selected backgrounds. */
+:root[data-dsh-wallpaper-highlight="custom"] body {
+  --dsw-alias-markdown-inline-code: var(--dsh-wallpaper-highlight) !important;
+  --dsw-alias-markdown-code-block: var(--dsh-wallpaper-highlight) !important;
+  --dsw-alias-markdown-code-block-banner: var(--dsh-wallpaper-highlight) !important;
+  --dsw-alias-markdown-tag: var(--dsh-wallpaper-highlight) !important;
+  --dsw-alias-markdown-citation: var(--dsh-wallpaper-highlight) !important;
+  --dsw-alias-markdown-code-segment-selected: var(--dsh-wallpaper-highlight) !important;
+  --dsw-alias-interactive-bg-hover: var(--dsh-wallpaper-highlight) !important;
+  --dsw-alias-interactive-bg-hover-solid: var(--dsh-wallpaper-highlight) !important;
+  --dsw-alias-state-business-tertiary: var(--dsh-wallpaper-highlight) !important;
+  --dsw-specific-bubble-highlight: var(--dsh-wallpaper-highlight) !important;
 }
 
 :root[data-dsh-wallpaper="on"] #root {
@@ -934,6 +1206,21 @@ window.__ModuleLoader__.load({
   filter: brightness(0.94);
 }
 
+.dshw-button--small {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.dshw-presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 100%;
+}
+
 .dshw-button:disabled,
 .dshw-segment:disabled,
 .dshw-slider input:disabled {
@@ -1101,6 +1388,36 @@ window.__ModuleLoader__.load({
   max-width: 100%;
 }
 
+.dshw-color-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.dshw-mini-button {
+  height: 28px;
+  padding: 0 8px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dshw-mini-button:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.dshw-mini-button:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+}
+
 .dshw-color-input {
   box-sizing: border-box;
   display: inline-flex;
@@ -1188,6 +1505,14 @@ window.__ModuleLoader__.load({
     align-self: flex-start;
   }
 
+  .dshw-color-stack {
+    align-items: flex-start;
+  }
+
+  .dshw-presets {
+    justify-content: flex-start;
+  }
+
   .dshw-slider {
     width: 100%;
   }
@@ -1248,7 +1573,7 @@ window.__ModuleLoader__.load({
         ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section',
           id: 'wallpaper',
-          order: 49,
+          order: 50,
           label: () => t('navLabel'),
           inject: () => ({ store, t, locale: ctx.locale }),
         }, SettingsPage))
