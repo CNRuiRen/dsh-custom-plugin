@@ -221,6 +221,18 @@ window.__ModuleLoader__.load({
       } catch {
         state.storageError = true
       }
+      if (state.fontColor !== 'auto' && isLightColor(state.fontColor)) {
+        // Older saved settings can contain white text with the original light
+        // panels; derive readable dark surfaces without losing the text choice.
+        if (state.panelColor === 'auto') {
+          state.panelColor = '#0f131b'
+          state.panelOpacity = 62
+        }
+        if (state.highlightColor === 'auto') {
+          state.highlightColor = '#000000'
+          state.highlightOpacity = 32
+        }
+      }
       if (!state.image) state.imageName = ''
       return state
     }
@@ -1573,7 +1585,7 @@ window.__ModuleLoader__.load({
         ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section',
           id: 'wallpaper',
-          order: 50,
+          order: 51,
           label: () => t('navLabel'),
           inject: () => ({ store, t, locale: ctx.locale }),
         }, SettingsPage))

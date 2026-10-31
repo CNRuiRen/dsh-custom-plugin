@@ -46,7 +46,7 @@ dsh plugin --profile <profile> add github:CNRuiRen/dsh-custom-plugin
 
 把 `<profile>` 换成要修改的 DSH profile，例如 `desktop`。
 
-包名：`dsh-wallpaper-cnr`。当前开发版：`0.0.2`。
+包名：`dsh-wallpaper-cnr`。当前版本：`0.0.3`。
 
 ## 使用
 
