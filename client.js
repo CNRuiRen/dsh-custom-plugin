@@ -6,18 +6,39 @@ window.__ModuleLoader__.load({
     const { useRef, useState, useSyncExternalStore } = React
 
     const NS = 'dsh-wallpaper'
-    const PREFS_KEY = 'dsh-wallpaper:v1:prefs'
-    const IMAGE_KEY = 'dsh-wallpaper:v1:image'
+    const LEGACY_PREFS_KEY = 'dsh-wallpaper:v1:prefs'
+    const LEGACY_IMAGE_KEY = 'dsh-wallpaper:v1:image'
+    const PROFILES_KEY = 'dsh-wallpaper:v1:profiles'
+    const MAX_PROFILES = 3 // Increase this and MAX_PROFILES in the docs together.
+    const MAX_PROFILE_FILE_BYTES = 20 * 1024 * 1024
     const MAX_FILE_BYTES = 30 * 1024 * 1024
     const MAX_DATA_CHARS = 3000000
     const FITS = ['cover', 'contain', 'tile']
     const MASKS = ['soft', 'none']
     const HEX_COLOR = /^#[0-9a-f]{6}$/i
 
+    const profilePrefsKey = (id) => `dsh-wallpaper:v1:profile:${id}:prefs`
+    const profileImageKey = (id) => `dsh-wallpaper:v1:profile:${id}:image`
+    const profileId = () => `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+
     const EN = {
       navLabel: 'Wallpaper',
       title: 'Wallpaper',
       intro: 'Use your own image behind the DeepSeek Harness workspace, including the startup screen.',
+      profiles: 'Configurations',
+      profileNew: 'New',
+      profileExport: 'Export',
+      profileImport: 'Import',
+      profileDelete: 'Delete',
+      profileName: 'Name',
+      profileDefault: 'Default',
+      profileLimit: 'At most 3 local configurations are allowed. Delete one before adding another.',
+      profileMin: 'Keep at least one configuration.',
+      profileInvalid: 'This file is not a valid wallpaper configuration.',
+      profileTooLarge: 'The configuration file is too large.',
+      profileStorage: 'The browser could not save this configuration.',
+      profileNameError: 'Enter a configuration name.',
+      profileDeleteConfirm: 'Delete this configuration?',
       previewEmpty: 'No image selected',
       previewHint: 'Drop an image here, or use Upload image.',
       previewAlt: 'Wallpaper preview',
@@ -88,6 +109,20 @@ window.__ModuleLoader__.load({
       navLabel: '背景图片',
       title: '背景图片',
       intro: '上传一张图片，作为 DeepSeek Harness 工作区和启动界面的背景。',
+      profiles: '配置方案',
+      profileNew: '新建',
+      profileExport: '导出',
+      profileImport: '导入',
+      profileDelete: '删除',
+      profileName: '名称',
+      profileDefault: '默认方案',
+      profileLimit: '本地最多保存 3 个配置方案；请先删除一个再新建或导入。',
+      profileMin: '至少保留一个配置方案。',
+      profileInvalid: '这个文件不是有效的背景配置。',
+      profileTooLarge: '配置文件太大，无法导入。',
+      profileStorage: '浏览器无法保存这个配置。',
+      profileNameError: '请输入配置名称。',
+      profileDeleteConfirm: '确定删除当前配置方案吗？',
       previewEmpty: '还没有选择图片',
       previewHint: '将图片拖到这里，或点击上传。',
       previewAlt: '背景图片预览',
@@ -176,6 +211,10 @@ window.__ModuleLoader__.load({
       dim: 18,
       image: '',
       imageName: '',
+      profiles: [],
+      activeProfile: '',
+      profileName: '',
+      profileError: null,
       busy: false,
       error: null,
       storageError: false,
@@ -225,52 +264,44 @@ window.__ModuleLoader__.load({
       return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722 > 0.55
     }
 
-    function readState() {
-      const state = { ...DEFAULTS }
-      try {
-        const raw = localStorage.getItem(PREFS_KEY)
-        if (raw) {
-          const saved = JSON.parse(raw)
-          if (typeof saved.enabled === 'boolean') state.enabled = saved.enabled
-          if (FITS.includes(saved.fit)) state.fit = saved.fit
-          if (MASKS.includes(saved.mask)) state.mask = saved.mask
-          if (saved.fontColor === 'auto' || (typeof saved.fontColor === 'string' && HEX_COLOR.test(saved.fontColor))) {
-            state.fontColor = saved.fontColor
-          }
-          if (saved.panelColor === 'auto' || (typeof saved.panelColor === 'string' && HEX_COLOR.test(saved.panelColor))) {
-            state.panelColor = saved.panelColor
-          }
-          if (saved.highlightColor === 'auto' || (typeof saved.highlightColor === 'string' && HEX_COLOR.test(saved.highlightColor))) {
-            state.highlightColor = saved.highlightColor
-          }
-          if (saved.buttonColor === 'auto' || (typeof saved.buttonColor === 'string' && HEX_COLOR.test(saved.buttonColor))) {
-            state.buttonColor = saved.buttonColor
-          }
-          if (saved.fileHeaderColor === 'auto' || (typeof saved.fileHeaderColor === 'string' && HEX_COLOR.test(saved.fileHeaderColor))) {
-            state.fileHeaderColor = saved.fileHeaderColor
-          }
-          if (saved.selectionColor === 'auto' || (typeof saved.selectionColor === 'string' && HEX_COLOR.test(saved.selectionColor))) {
-            state.selectionColor = saved.selectionColor
-          }
-          if (saved.selectionTextColor === 'auto' || (typeof saved.selectionTextColor === 'string' && HEX_COLOR.test(saved.selectionTextColor))) {
-            state.selectionTextColor = saved.selectionTextColor
-          }
-          state.panelOpacity = clampOr(saved.panelOpacity, state.panelOpacity, 0, 100)
-          state.highlightOpacity = clampOr(saved.highlightOpacity, state.highlightOpacity, 0, 100)
-          state.buttonOpacity = clampOr(saved.buttonOpacity, state.buttonOpacity, 0, 100)
-          state.fileHeaderOpacity = clampOr(saved.fileHeaderOpacity, state.fileHeaderOpacity, 0, 100)
-          state.selectionOpacity = clampOr(saved.selectionOpacity, state.selectionOpacity, 0, 100)
-          state.modalMask = clampOr(saved.modalMask, state.modalMask, 0, 80)
-          state.intensity = clampOr(saved.intensity, state.intensity, 0, 100)
-          state.blur = clampOr(saved.blur, state.blur, 0, 30)
-          state.dim = clampOr(saved.dim, state.dim, 0, 60)
-          if (typeof saved.imageName === 'string') state.imageName = saved.imageName
-        }
-        const image = localStorage.getItem(IMAGE_KEY)
-        if (typeof image === 'string' && image.startsWith('data:image/')) state.image = image
-      } catch {
-        state.storageError = true
+    function applySavedPrefs(state, saved) {
+      if (typeof saved.enabled === 'boolean') state.enabled = saved.enabled
+      if (FITS.includes(saved.fit)) state.fit = saved.fit
+      if (MASKS.includes(saved.mask)) state.mask = saved.mask
+      if (saved.fontColor === 'auto' || (typeof saved.fontColor === 'string' && HEX_COLOR.test(saved.fontColor))) {
+        state.fontColor = saved.fontColor
       }
+      if (saved.panelColor === 'auto' || (typeof saved.panelColor === 'string' && HEX_COLOR.test(saved.panelColor))) {
+        state.panelColor = saved.panelColor
+      }
+      if (saved.highlightColor === 'auto' || (typeof saved.highlightColor === 'string' && HEX_COLOR.test(saved.highlightColor))) {
+        state.highlightColor = saved.highlightColor
+      }
+      if (saved.buttonColor === 'auto' || (typeof saved.buttonColor === 'string' && HEX_COLOR.test(saved.buttonColor))) {
+        state.buttonColor = saved.buttonColor
+      }
+      if (saved.fileHeaderColor === 'auto' || (typeof saved.fileHeaderColor === 'string' && HEX_COLOR.test(saved.fileHeaderColor))) {
+        state.fileHeaderColor = saved.fileHeaderColor
+      }
+      if (saved.selectionColor === 'auto' || (typeof saved.selectionColor === 'string' && HEX_COLOR.test(saved.selectionColor))) {
+        state.selectionColor = saved.selectionColor
+      }
+      if (saved.selectionTextColor === 'auto' || (typeof saved.selectionTextColor === 'string' && HEX_COLOR.test(saved.selectionTextColor))) {
+        state.selectionTextColor = saved.selectionTextColor
+      }
+      state.panelOpacity = clampOr(saved.panelOpacity, state.panelOpacity, 0, 100)
+      state.highlightOpacity = clampOr(saved.highlightOpacity, state.highlightOpacity, 0, 100)
+      state.buttonOpacity = clampOr(saved.buttonOpacity, state.buttonOpacity, 0, 100)
+      state.fileHeaderOpacity = clampOr(saved.fileHeaderOpacity, state.fileHeaderOpacity, 0, 100)
+      state.selectionOpacity = clampOr(saved.selectionOpacity, state.selectionOpacity, 0, 100)
+      state.modalMask = clampOr(saved.modalMask, state.modalMask, 0, 80)
+      state.intensity = clampOr(saved.intensity, state.intensity, 0, 100)
+      state.blur = clampOr(saved.blur, state.blur, 0, 30)
+      state.dim = clampOr(saved.dim, state.dim, 0, 60)
+      if (typeof saved.imageName === 'string') state.imageName = saved.imageName
+    }
+
+    function deriveAutoSurfaces(state) {
       if (state.fontColor !== 'auto' && isLightColor(state.fontColor)) {
         // Older saved settings can contain white text with the original light
         // panels; derive readable dark surfaces without losing the text choice.
@@ -287,13 +318,84 @@ window.__ModuleLoader__.load({
           state.fileHeaderOpacity = 55
         }
       }
+      return state
+    }
+
+    function defaultRegistry() {
+      return { version: 1, active: 'p1', items: [{ id: 'p1', name: '默认方案' }] }
+    }
+
+    function readRegistry() {
+      const fallback = defaultRegistry()
+      try {
+        const raw = localStorage.getItem(PROFILES_KEY)
+        if (raw) {
+          const saved = JSON.parse(raw)
+          if (Array.isArray(saved.items)) {
+            const items = []
+            const seen = new Set()
+            for (const item of saved.items) {
+              if (items.length >= MAX_PROFILES) break
+              if (item === null || typeof item !== 'object') continue
+              if (typeof item.id !== 'string' || !item.id || seen.has(item.id)) continue
+              seen.add(item.id)
+              items.push({
+                id: item.id,
+                name: typeof item.name === 'string' && item.name.trim() ? item.name.trim().slice(0, 40) : `方案 ${items.length + 1}`,
+              })
+            }
+            if (items.length > 0) {
+              const active = items.some((item) => item.id === saved.active) ? saved.active : items[0].id
+              return { version: 1, active, items }
+            }
+          }
+        }
+
+        // First run: copy the pre-profile settings and image into profile p1.
+        const legacyPrefs = localStorage.getItem(LEGACY_PREFS_KEY)
+        const legacyImage = localStorage.getItem(LEGACY_IMAGE_KEY)
+        if (legacyPrefs) localStorage.setItem(profilePrefsKey('p1'), legacyPrefs)
+        if (legacyImage) localStorage.setItem(profileImageKey('p1'), legacyImage)
+        if (legacyPrefs) localStorage.removeItem(LEGACY_PREFS_KEY)
+        if (legacyImage) localStorage.removeItem(LEGACY_IMAGE_KEY)
+        localStorage.setItem(PROFILES_KEY, JSON.stringify(fallback))
+        return fallback
+      } catch {
+        return fallback
+      }
+    }
+
+    function readProfileState(id) {
+      const state = { ...DEFAULTS }
+      try {
+        let raw = localStorage.getItem(profilePrefsKey(id))
+        if (!raw && id === 'p1') raw = localStorage.getItem(LEGACY_PREFS_KEY)
+        if (raw) applySavedPrefs(state, JSON.parse(raw))
+        let image = localStorage.getItem(profileImageKey(id))
+        if (!image && id === 'p1') image = localStorage.getItem(LEGACY_IMAGE_KEY)
+        if (typeof image === 'string' && image.startsWith('data:image/')) state.image = image
+      } catch {
+        state.storageError = true
+      }
+      deriveAutoSurfaces(state)
       if (!state.image) state.imageName = ''
+      return state
+    }
+
+    function readState() {
+      const registry = readRegistry()
+      const active = registry.items.find((item) => item.id === registry.active) ?? registry.items[0]
+      const state = readProfileState(active.id)
+      state.profiles = registry.items
+      state.activeProfile = active.id
+      state.profileName = active.name
       return state
     }
 
     function savePrefs(state) {
       try {
-        localStorage.setItem(PREFS_KEY, JSON.stringify({
+        const id = state.activeProfile || 'p1'
+        localStorage.setItem(profilePrefsKey(id), JSON.stringify({
           enabled: state.enabled,
           fit: state.fit,
           mask: state.mask,
@@ -318,6 +420,91 @@ window.__ModuleLoader__.load({
         return true
       } catch {
         return false
+      }
+    }
+
+    function saveRegistry(state) {
+      try {
+        localStorage.setItem(PROFILES_KEY, JSON.stringify({
+          version: 1,
+          active: state.activeProfile,
+          items: state.profiles,
+        }))
+        return true
+      } catch {
+        return false
+      }
+    }
+
+    function prefsSnapshot(state) {
+      return {
+        enabled: state.enabled,
+        fit: state.fit,
+        mask: state.mask,
+        fontColor: state.fontColor,
+        panelColor: state.panelColor,
+        panelOpacity: state.panelOpacity,
+        highlightColor: state.highlightColor,
+        highlightOpacity: state.highlightOpacity,
+        buttonColor: state.buttonColor,
+        buttonOpacity: state.buttonOpacity,
+        fileHeaderColor: state.fileHeaderColor,
+        fileHeaderOpacity: state.fileHeaderOpacity,
+        selectionColor: state.selectionColor,
+        selectionOpacity: state.selectionOpacity,
+        selectionTextColor: state.selectionTextColor,
+        modalMask: state.modalMask,
+        intensity: state.intensity,
+        blur: state.blur,
+        dim: state.dim,
+        imageName: state.imageName,
+      }
+    }
+
+    function downloadProfile(state) {
+      const payload = {
+        schema: 'dsh-wallpaper-profile',
+        version: 1,
+        name: state.profileName || '默认方案',
+        exportedAt: new Date().toISOString(),
+        settings: prefsSnapshot(state),
+        image: state.image || '',
+        imageName: state.imageName || '',
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const anchor = window.document.createElement('a')
+      const safeName = (state.profileName || 'dsh-wallpaper').replace(/[\\/:*?"<>|\s]+/g, '-').slice(0, 48)
+      anchor.href = url
+      anchor.download = `dsh-wallpaper-${safeName || 'profile'}.json`
+      anchor.style.display = 'none'
+      window.document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    }
+
+    function parseProfileFile(text) {
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error('invalid')
+      }
+      if (data === null || typeof data !== 'object') throw new Error('invalid')
+      if (data.schema !== 'dsh-wallpaper-profile' || data.version !== 1) throw new Error('invalid')
+      if (data.settings === null || typeof data.settings !== 'object') throw new Error('invalid')
+      const image = typeof data.image === 'string' ? data.image : ''
+      if (image && !image.startsWith('data:image/')) throw new Error('invalid')
+      const parsed = { ...DEFAULTS }
+      applySavedPrefs(parsed, data.settings)
+      parsed.image = image
+      parsed.imageName = typeof data.imageName === 'string' ? data.imageName.slice(0, 200) : ''
+      deriveAutoSurfaces(parsed)
+      return {
+        name: typeof data.name === 'string' && data.name.trim() ? data.name.trim().slice(0, 40) : '导入方案',
+        prefs: prefsSnapshot(parsed),
+        image,
       }
     }
 
@@ -459,7 +646,7 @@ window.__ModuleLoader__.load({
           const data = await prepareImage(file)
           if (token !== uploadToken) return
           try {
-            localStorage.setItem(IMAGE_KEY, data)
+            localStorage.setItem(profileImageKey(state.activeProfile || 'p1'), data)
           } catch {
             commit({ image: data, imageName: file.name || '', busy: false, error: 'storage' }, false)
             return
@@ -474,11 +661,149 @@ window.__ModuleLoader__.load({
       const clear = () => {
         uploadToken++
         try {
-          localStorage.removeItem(IMAGE_KEY)
+          localStorage.removeItem(profileImageKey(state.activeProfile || 'p1'))
         } catch {
           // The in-memory image still clears below.
         }
         commit({ image: '', imageName: '', busy: false, error: null })
+      }
+
+      const publish = (next) => {
+        state = next
+        emit()
+      }
+
+      const failProfile = (code) => {
+        state = { ...state, profileError: code }
+        emit()
+      }
+
+      const switchProfile = (id) => {
+        if (id === state.activeProfile) return
+        const item = state.profiles.find((profile) => profile.id === id)
+        if (!item) return
+        uploadToken++
+        const registry = { version: 1, active: id, items: state.profiles }
+        try {
+          localStorage.setItem(PROFILES_KEY, JSON.stringify(registry))
+        } catch {
+          failProfile('storage')
+          return
+        }
+        const next = readProfileState(id)
+        next.profiles = state.profiles
+        next.activeProfile = id
+        next.profileName = item.name
+        next.profileError = null
+        publish(next)
+      }
+
+      const createProfile = () => {
+        if (state.profiles.length >= MAX_PROFILES) {
+          failProfile('limit')
+          return
+        }
+        uploadToken++
+        const id = profileId()
+        const baseName = `方案 ${state.profiles.length + 1}`
+        let name = baseName
+        const names = new Set(state.profiles.map((profile) => profile.name))
+        let suffix = 1
+        while (names.has(name)) name = `${baseName} (${++suffix})`
+        try {
+          localStorage.setItem(profilePrefsKey(id), JSON.stringify(prefsSnapshot(state)))
+          if (state.image) localStorage.setItem(profileImageKey(id), state.image)
+        } catch {
+          failProfile('storage')
+          return
+        }
+        const items = [...state.profiles, { id, name }]
+        const next = readProfileState(id)
+        next.profiles = items
+        next.activeProfile = id
+        next.profileName = name
+        next.profileError = null
+        saveRegistry(next)
+        publish(next)
+      }
+
+      const deleteProfile = () => {
+        if (state.profiles.length <= 1) {
+          failProfile('min')
+          return
+        }
+        uploadToken++
+        const current = state.activeProfile
+        try {
+          localStorage.removeItem(profilePrefsKey(current))
+          localStorage.removeItem(profileImageKey(current))
+        } catch {
+          failProfile('storage')
+          return
+        }
+        const items = state.profiles.filter((profile) => profile.id !== current)
+        const next = readProfileState(items[0].id)
+        next.profiles = items
+        next.activeProfile = items[0].id
+        next.profileName = items[0].name
+        next.profileError = null
+        saveRegistry(next)
+        publish(next)
+      }
+
+      const renameProfile = (name) => {
+        const clean = typeof name === 'string' ? name.trim().slice(0, 40) : ''
+        if (!clean) {
+          failProfile('name')
+          return
+        }
+        const items = state.profiles.map((profile) => (
+          profile.id === state.activeProfile ? { ...profile, name: clean } : profile
+        ))
+        const next = { ...state, profiles: items, profileName: clean, profileError: null }
+        saveRegistry(next)
+        publish(next)
+      }
+
+      const exportProfile = () => {
+        try {
+          downloadProfile(state)
+        } catch {
+          failProfile('storage')
+        }
+      }
+
+      const importProfile = async (file) => {
+        if (!file) return
+        uploadToken++
+        if (state.profiles.length >= MAX_PROFILES) {
+          failProfile('limit')
+          return
+        }
+        if (file.size > MAX_PROFILE_FILE_BYTES) {
+          failProfile('tooLarge')
+          return
+        }
+        try {
+          const parsed = parseProfileFile(await file.text())
+          const id = profileId()
+          let name = parsed.name
+          const names = new Set(state.profiles.map((profile) => profile.name))
+          let suffix = 1
+          while (names.has(name)) name = `${parsed.name} (${++suffix})`
+          localStorage.setItem(profilePrefsKey(id), JSON.stringify(parsed.prefs))
+          if (parsed.image) localStorage.setItem(profileImageKey(id), parsed.image)
+          const items = [...state.profiles, { id, name }]
+          const next = readProfileState(id)
+          next.profiles = items
+          next.activeProfile = id
+          next.profileName = name
+          next.profileError = null
+          saveRegistry(next)
+          publish(next)
+        } catch (error) {
+          failProfile(error instanceof Error && error.message === 'invalid' ? 'invalid' : 'storage')
+        }
       }
 
       return {
@@ -539,6 +864,12 @@ window.__ModuleLoader__.load({
             commit({ modalMask: clamp(value, 0, 80) })
           }
         },
+        switchProfile,
+        createProfile,
+        deleteProfile,
+        renameProfile,
+        exportProfile,
+        importProfile,
         applyPreset: (name) => {
           if (name === 'dark') {
             commit({
@@ -663,6 +994,15 @@ window.__ModuleLoader__.load({
       if (code === 'unsupported') return t('errorUnsupported')
       if (code === 'storage') return t('errorStorage')
       return t('errorDecode')
+    }
+
+    function profileErrorText(t, code) {
+      if (code === 'limit') return t('profileLimit')
+      if (code === 'min') return t('profileMin')
+      if (code === 'invalid') return t('profileInvalid')
+      if (code === 'tooLarge') return t('profileTooLarge')
+      if (code === 'name') return t('profileNameError')
+      return t('profileStorage')
     }
 
     function Row(props) {
@@ -794,7 +1134,11 @@ window.__ModuleLoader__.load({
         () => 0,
       )
       const inputRef = useRef(null)
+      const importRef = useRef(null)
       const [dragging, setDragging] = useState(false)
+      const profiles = state.profiles.length
+        ? state.profiles
+        : [{ id: state.activeProfile || 'p1', name: state.profileName || t('profileDefault') }]
 
       const previewStyle = state.image ? {
         backgroundImage: 'url("' + state.image + '")',
@@ -814,6 +1158,78 @@ window.__ModuleLoader__.load({
         h('header', { className: 'dshw-heading' },
           h('h1', { className: 'dshw-title' }, t('title')),
           h('p', { className: 'dshw-intro' }, t('intro')),
+        ),
+
+        h('div', { className: 'dshw-card dshw-profiles' },
+          h('div', { className: 'dshw-profile-head' },
+            h('div', { className: 'dshw-profile-title' },
+              t('profiles'),
+              h('span', { className: 'dshw-profile-count' }, `${profiles.length}/${MAX_PROFILES}`),
+            ),
+            h('div', { className: 'dshw-profile-actions' },
+              h('button', {
+                type: 'button',
+                className: 'dshw-button dshw-button--small',
+                disabled: profiles.length >= MAX_PROFILES,
+                onClick: store.createProfile,
+              }, t('profileNew')),
+              h('button', {
+                type: 'button',
+                className: 'dshw-button dshw-button--small',
+                disabled: profiles.length >= MAX_PROFILES,
+                onClick: () => importRef.current && importRef.current.click(),
+              }, t('profileImport')),
+              h('button', {
+                type: 'button',
+                className: 'dshw-button dshw-button--small',
+                onClick: store.exportProfile,
+              }, t('profileExport')),
+              h('button', {
+                type: 'button',
+                className: 'dshw-button dshw-button--small',
+                disabled: profiles.length <= 1,
+                onClick: () => {
+                  if (window.confirm(t('profileDeleteConfirm'))) store.deleteProfile()
+                },
+              }, t('profileDelete')),
+            ),
+          ),
+          h('div', { className: 'dshw-profile-tabs' },
+            profiles.map((profile) => h('button', {
+              key: profile.id,
+              type: 'button',
+              className: 'dshw-profile-tab' + (profile.id === state.activeProfile ? ' dshw-profile-tab--on' : ''),
+              'aria-pressed': profile.id === state.activeProfile,
+              onClick: () => store.switchProfile(profile.id),
+            }, profile.name)),
+          ),
+          h('label', { className: 'dshw-profile-name' },
+            h('span', null, t('profileName')),
+            h('input', {
+              key: state.activeProfile,
+              type: 'text',
+              defaultValue: state.profileName,
+              maxLength: 40,
+              onBlur: (event) => store.renameProfile(event.target.value),
+              onKeyDown: (event) => {
+                if (event.key === 'Enter') event.currentTarget.blur()
+              },
+            }),
+          ),
+          h('input', {
+            ref: importRef,
+            className: 'dshw-file',
+            type: 'file',
+            accept: '.json,application/json',
+            onChange: (event) => {
+              const file = event.target.files && event.target.files[0]
+              if (file) store.importProfile(file)
+              event.target.value = ''
+            },
+          }),
+          state.profileError
+            ? h('p', { className: 'dshw-error dshw-profile-error', role: 'alert' }, profileErrorText(t, state.profileError))
+            : null,
         ),
 
         h('div', { className: 'dshw-card' },
@@ -1199,6 +1615,9 @@ window.__ModuleLoader__.load({
   --dsw-alias-button-info-hover: color-mix(in srgb, var(--dsh-wallpaper-button) 86%, #000) !important;
   --dsw-alias-button-tool-bar-fill: var(--dsh-wallpaper-button) !important;
   --dsw-alias-button-tool-bar-hover: color-mix(in srgb, var(--dsh-wallpaper-button) 86%, #000) !important;
+  --dsw-alias-button-elevated-fill: var(--dsh-wallpaper-button) !important;
+  --dsw-alias-button-floating-hover: color-mix(in srgb, var(--dsh-wallpaper-button) 86%, #000) !important;
+  --dsw-specific-selector: var(--dsh-wallpaper-button) !important;
 }
 
 /* File preview / file card / code block title bars. */
@@ -1234,7 +1653,10 @@ window.__ModuleLoader__.load({
 
 :root[data-dsh-wallpaper-selection="custom"] [aria-current="page"],
 :root[data-dsh-wallpaper-selection="custom"] [aria-selected="true"],
-:root[data-dsh-wallpaper-selection="custom"] [data-selected="true"] {
+:root[data-dsh-wallpaper-selection="custom"] [data-selected="true"],
+:root[data-dsh-wallpaper-selection="custom"] [data-active="true"],
+:root[data-dsh-wallpaper-selection="custom"] [role="dialog"] nav button[class*="active"],
+:root[data-dsh-wallpaper-selection="custom"] [role="dialog"] nav button[class*="selected"] {
   background-color: var(--dsh-wallpaper-selection) !important;
   color: var(--dsh-wallpaper-selection-text) !important;
 }
@@ -1336,6 +1758,117 @@ window.__ModuleLoader__.load({
   border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: 16px;
   background: var(--dsw-alias-bg-layer-1);
+}
+
+.dshw-profiles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.dshw-profile-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dshw-profile-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.dshw-profile-count {
+  corner-shape: round;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.dshw-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dshw-profile-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dshw-profile-tab {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 9px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dshw-profile-tab:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.dshw-profile-tab--on {
+  border-color: transparent;
+  background: var(--dsw-alias-brand-primary);
+  color: #fff;
+}
+
+.dshw-profile-tab--on:hover {
+  background: var(--dsw-alias-brand-primary);
+  color: #fff;
+}
+
+.dshw-profile-tab:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+}
+
+.dshw-profile-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.dshw-profile-name input {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 9px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12px;
+}
+
+.dshw-profile-name input:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.dshw-profile-error {
+  padding: 0;
+  margin: 0;
 }
 
 .dshw-preview {
@@ -1845,7 +2378,7 @@ window.__ModuleLoader__.load({
         ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section',
           id: 'wallpaper',
-          order: 55,
+          order: 58,
           label: () => t('navLabel'),
           inject: () => ({ store, t, locale: ctx.locale }),
         }, SettingsPage))
